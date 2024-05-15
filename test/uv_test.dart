@@ -1,11 +1,6 @@
-import 'package:dartuv/src/handles/check.dart';
-import 'package:dartuv/src/handles/idle.dart';
-import 'package:dartuv/src/handles/prepare.dart';
-import 'package:dartuv/src/handles/timer.dart';
 import 'package:test/test.dart';
 import 'package:dartuv/src/bindings/libuv.dart';
 import 'package:dartuv/src/handles/handle.dart';
-import 'package:dartuv/src/handles/process.dart';
 import 'package:dartuv/uv.dart';
 
 void main() {
@@ -24,8 +19,8 @@ void main() {
       String now = DateTime.now().toUtc().toIso8601String();
       print('time: $now');
       time.start((h) {
-        var _now = DateTime.now().toUtc().toIso8601String();
-        print("callback at $_now");
+        var now0 = DateTime.now().toUtc().toIso8601String();
+        print("callback at $now0");
         h.close();
       }, 5, 3);
 
@@ -52,12 +47,12 @@ void main() {
 
     test('uv_check', () {
       var loop = Loop();
-      int check_called = 0;
-      int timer_called = 0;
+      int checkCalled = 0;
+      int timerCalled = 0;
 
       Check check = Check(loop);
       check.start((h) {
-        check_called++;
+        checkCalled++;
         check.stop();
         check.close();
         h.close();
@@ -65,7 +60,7 @@ void main() {
 
       Timer timer = Timer(loop);
       timer.start((h) {
-        timer_called++;
+        timerCalled++;
         timer.stop();
         h.close();
       }, 1, 0);
@@ -73,18 +68,18 @@ void main() {
       loop.run();
       loop.close();
 
-      expect(check_called, equals(1));
-      expect(timer_called, equals(1));
+      expect(checkCalled, equals(1));
+      expect(timerCalled, equals(1));
     });
 
     test('uv_prepare', () {
       var loop = Loop();
-      int check_called = 0;
-      int timer_called = 0;
+      int checkCalled = 0;
+      int timerCalled = 0;
 
       Prepare prepare = Prepare(loop);
       prepare.start((h) {
-        check_called++;
+        checkCalled++;
         prepare.stop();
         prepare.close();
         h.close();
@@ -92,7 +87,7 @@ void main() {
 
       Timer timer = Timer(loop);
       timer.start((h) {
-        timer_called++;
+        timerCalled++;
         timer.stop();
         h.close();
       }, 1, 0);
@@ -100,8 +95,30 @@ void main() {
       loop.run();
       loop.close();
 
-      expect(check_called, equals(1));
-      expect(timer_called, equals(1));
+      expect(checkCalled, equals(1));
+      expect(timerCalled, equals(1));
+    });
+    test('uv_process', () {
+      var loop = Loop();
+
+      callback(Handle process) {
+        print("callback called");
+        process.close();
+      }
+
+      final process = Process(
+        loop,
+        file: 'id',
+        args: ['id'],
+        callback: callback,
+        flags: uv_process_flags.UV_PROCESS_DETACHED,
+      );
+
+      assert(process.pid > 0);
+      // process.close();
+
+      loop.run();
+      print("something");
     });
   });
 }
