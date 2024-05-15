@@ -1,4 +1,5 @@
 import 'dart:ffi';
+
 import 'package:dartuv/src/bindings/libuv.dart';
 import 'package:dartuv/src/handles/handle.dart';
 import 'package:ffi/ffi.dart';
@@ -20,18 +21,12 @@ class Idle extends Handle {
   ///
   /// This method will also set the "start" property of the handle to the provided [callback], if it is not null.
   void start([HandleCallback? callback]) {
-    if (callback != null) {
-      set('start', callback);
-      set("start", callback);
-    }
-    uv_idle_cb callbackPtr =
-        Pointer.fromFunction<uv_idle_cbFunction>(_idleCallback);
-
-    uv_idle_start(handle.cast(), callback == null ? nullptr : callbackPtr);
-  }
-
-  static void _idleCallback(Pointer<uv_idle_s> handle) {
-    addressToHandle(handle)?.call('start');
+    NativeCallable<uv_idle_cbFunction>? callable =
+        NativeCallable.isolateLocal((Pointer<uv_idle_s> handle) {
+      callback != null ? callback(this) : null;
+    });
+    uv_idle_start(
+        handle.cast(), callback == null ? nullptr : callable.nativeFunction);
   }
 
   /// Stops the idle handle.

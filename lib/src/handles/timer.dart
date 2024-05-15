@@ -1,4 +1,5 @@
 import 'dart:ffi';
+
 import 'package:dartuv/src/bindings/libuv.dart';
 import 'package:dartuv/src/handles/handle.dart';
 import 'package:ffi/ffi.dart';
@@ -23,17 +24,16 @@ class Timer extends Handle {
   /// If no [callback] is provided, the timer will simply fire after the specified
   /// [timeout] and repeat at the specified [repeat] interval.
   void start([HandleCallback? callback, int timeout = 0, int repeat = 0]) {
-    if (callback != null) {
-      set('start', callback);
-    }
-    uv_timer_cb callbackPtr =
-        Pointer.fromFunction<uv_timer_cbFunction>(_idleCallback);
-    uv_timer_start(handle.cast(), callback == null ? nullptr : callbackPtr,
-        timeout * 1000, repeat * 1000);
-  }
+    NativeCallable<uv_timer_cbFunction>? callbackPtr =
+        NativeCallable.isolateLocal((Pointer<uv_timer_s> handle) {
+      callback != null ? callback(this) : null;
+    });
 
-  static void _idleCallback(Pointer<uv_timer_s> handle) {
-    addressToHandle(handle)?.call('start');
+    uv_timer_start(
+        handle.cast(),
+        callback == null ? nullptr : callbackPtr.nativeFunction,
+        timeout * 1000,
+        repeat * 1000);
   }
 
   /// Calls [uv_timer_again] on the underlying timer handle.
