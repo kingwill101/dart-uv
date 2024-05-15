@@ -1,4 +1,5 @@
 import 'dart:ffi';
+
 import 'package:dartuv/src/bindings/libuv.dart';
 import 'package:dartuv/src/handles/handle.dart';
 import 'package:ffi/ffi.dart';
@@ -19,16 +20,13 @@ class Check extends Handle {
   ///
   /// The [start] method should be called to activate the check handle and begin checking for events.
   void start([HandleCallback? callback]) {
-    if (callback != null) {
-      set('start', callback);
-    }
-    uv_check_cb callbackPtr =
-        Pointer.fromFunction<uv_check_cbFunction>(_idleCallback);
-    uv_check_start(handle.cast(), callback == null ? nullptr : callbackPtr);
-  }
+    NativeCallable<uv_check_cbFunction>? callbackPtr =
+        NativeCallable.isolateLocal((Pointer<uv_check_s> handle) {
+      callback != null ? callback(this) : null;
+    });
 
-  static void _idleCallback(Pointer<uv_check_s> handle) {
-    addressToHandle(handle)?.call('start');
+    uv_check_start(
+        handle.cast(), callback == null ? nullptr : callbackPtr.nativeFunction);
   }
 
   /// Stops the check handle.

@@ -1,7 +1,5 @@
 import 'dart:ffi';
 
-import 'package:dartuv/src/handles/callback_registry.dart';
-import 'package:objectid/objectid.dart';
 import 'package:dartuv/src/bindings/libuv.dart';
 import 'package:dartuv/src/loop.dart';
 
@@ -20,20 +18,6 @@ void uvStop([Loop? loop]) {
   uv_stop(loop.inner);
 }
 
-/// Looks up a [Handle] instance by its associated [Pointer] address.
-///
-/// This method retrieves the [Handle] instance that is associated with the
-/// provided [Pointer] address. If a [Handle] instance is found, it is returned.
-/// Otherwise, `null` is returned.
-///
-/// This method is used to look up a [Handle] instance based on its underlying
-/// [Pointer] representation, which is useful when working with low-level
-/// system APIs that deal with pointers.
-Handle? addressToHandle(Pointer handle) {
-  final objectId = Handle._pointerToIdMap[handle.address];
-  return objectId != null ? Handle._handleRegistry[objectId] : null;
-}
-
 /// Represents a handle, which is a reference to an object in the underlying
 /// event loop. Handles can be associated with callbacks that are called when
 /// certain events occur on the handle.
@@ -47,41 +31,12 @@ Handle? addressToHandle(Pointer handle) {
 /// with, and provide methods for checking the active and closing state of the
 /// handle.
 abstract class Handle {
-  final ObjectId id = ObjectId();
   Loop? loop;
   Pointer handle = nullptr;
 
-  static final CallbackRegistry _callbackRegistry = CallbackRegistry();
-  static final Map<String, Handle> _handleRegistry =
-      {}; // Map of ObjectId to Handle
-  static final Map<int, String> _pointerToIdMap =
-      {}; // Map of Pointer address to ObjectId
-
-  Map<int, String> get pointerMap => _pointerToIdMap;
 
   Handle([this.loop]) {
     init();
-    _handleRegistry[id.hexString] = this; // Register this handle
-    _pointerToIdMap[handle.address] =
-        id.hexString; // Map the Pointer address to ObjectId
-  }
-
-  /// Registers a callback for the specified name.
-  ///
-  /// This method adds the provided callback to the internal callback registry,
-  /// associating it with the given name. This allows the callback to be
-  /// retrieved and executed later by calling the [call] method with the
-  /// same name.
-  void set(String name, HandleCallback callback) {
-    _callbackRegistry.register(id.hexString, name, callback);
-  }
-
-  /// Calls the callback associated with the specified name.
-  ///
-  /// This method retrieves the callback registered for the given name and calls it with the current instance as the argument.
-  void call(String name) {
-    final callback = _callbackRegistry.get(id.hexString, name);
-    callback?.call(this);
   }
 
   /// Initializes the handle's associated event loop if it has not already been initialized.
@@ -122,19 +77,11 @@ abstract class Handle {
   /// Calling this method multiple times has no effect - the handle will only be closed once.
   void close([HandleCallback? callback]) {
     if (closing()) return;
-
-    if (callback == null) {
-      uv_close(handle.cast(), nullptr);
-    } else {
-      set('close', callback);
-      uv_close_cb callbackPtr =
-          Pointer.fromFunction<uv_close_cbFunction>(_closeCallback);
-      uv_close(handle.cast(), callbackPtr);
-    }
-  }
-
-  static void _closeCallback(Pointer<uv_handle_t> handle) {
-    addressToHandle(handle)?.call('close');
+    NativeCallable<uv_close_cbFunction>? callbackPtr =
+        NativeCallable.isolateLocal((Pointer<uv_handle_t> handle) {
+      callback != null ? callback(this) : null;
+    });
+    uv_close(handle.cast(), callbackPtr.nativeFunction);
   }
 
   /// Increments the reference count for the handle.
