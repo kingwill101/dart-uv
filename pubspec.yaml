@@ -1,0 +1,56 @@
+name: dartuv
+description: Dart bindings for libuv.
+version: 1.0.0
+repository: https://github.com/kingwill101/dartuv
+
+environment:
+  sdk: ^3.4.0
+
+# Add regular dependencies here.
+dependencies:
+  ffi: ^2.1.2
+  logging: ^1.2.0
+  objectid: ^3.0.0
+
+dev_dependencies:
+  ffigen: ^12.0.0
+  lints: ^3.0.0
+  native_assets_cli: ^0.5.4
+  test: ^1.24.0
+
+ffigen:
+  name: dartuv
+  output: 'lib/src/bindings/libuv.dart'
+  comments:
+    style: any
+    length: full
+  ffi-native:
+    assetId: 'package:dartuv/src/bindings/libuv.dart'
+  headers:
+    entry-points:
+      - 'include/uv.h'
+
+    include-directives:
+      - 'include/uv.h'
+
+  llvm-path:
+    - '/usr/lib/llv'
+    - '/usr/lib64/libclang.so'
+  
+  compiler-opts:
+    - '-I/usr/include'
+    - '-I/usr/include/llvm'
+    - '-I/usr/lib/clang/16/include'
+  library-imports:
+    'netdb': 'netdb.dart'
+  type-map:
+    'typedefs': # Targets typedefs.
+      'addrinfo':
+        'lib': 'netdb'
+        'c-type': 'addrinfo'
+        'dart-type': 'addrinfo'
+    'structs': # Targets structs.
+      'addrinfo':
+        'lib': 'netdb'
+        'c-type': 'addrinfo'
+        'dart-type': 'addrinfo'
