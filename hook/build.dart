@@ -1,7 +1,7 @@
 import 'package:native_assets_cli/native_assets_cli.dart';
 
-const assetName = 'libuv.so';
-final packageAssetPath = Uri.file('/usr/lib/$assetName');
+const assetName = 'libuv.so.1';
+final packageAssetPath = Uri.file('$assetName');
 
 void main(List<String> args) async {
   await build(args, (config, output) async {
